@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no"><title>Welcome to CashCoinser</title>
+    <style>@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');body{font-family:'Inter',sans-serif;background-color:#121212;color:#EAEAEA;margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh}.container{width:100%;max-width:400px;padding:2rem;box-sizing:border-box}.header{text-align:center;margin-bottom:2.5rem}.header .brand{font-size:1.125rem;font-weight:500;color:#A0A0A0}.header .title{font-size:2rem;font-weight:700;color:#FFFFFF;margin-top:.5rem}.form-group{margin-bottom:1.25rem}input{width:100%;padding:1rem;background-color:#1E1E1E;border:1px solid #333333;border-radius:.75rem;font-size:1rem;box-sizing:border-box;outline:0;color:#FFFFFF;transition:all .2s ease}input:focus{border-color:#F97316;box-shadow:0 0 0 2px rgba(249,115,22,.4)}.btn{width:100%;padding:1rem;border:none;border-radius:.75rem;font-size:1rem;font-weight:600;cursor:pointer;transition:background-color .2s}.btn-primary{background-color:#F97316;color:#FFFFFF}.btn-primary:hover{background-color:#EA580C}.btn-secondary{background-color:#333333;color:#EAEAEA}.btn-secondary:hover{background-color:#444444}.divider{text-align:center;color:#777777;margin:1.5rem 0}.hidden{display:none}</style>
+</head>
+<body>
+    <div class="container">
+        <div class="header"><p class="brand">CashCoinser</p><h2 class="title">Welcome</h2></div>
+        <div id="login-form">
+            <div class="form-group"><input id="login-email" type="email" placeholder="Email"></div>
+            <div class="form-group"><input id="login-password" type="password" placeholder="Password"></div>
+            <button id="login-btn" class="btn btn-primary">Log In</button>
+            <p class="divider">Or</p><button onclick="toggleForms()" class="btn btn-secondary">Sign Up</button>
+        </div>
+        <div id="register-form" class="hidden">
+            <div class="form-group"><input id="reg-name" type="text" placeholder="Full Name"></div>
+            <div class="form-group"><input id="reg-email" type="email" placeholder="Email"></div>
+            <div class="form-group"><input id="reg-password" type="password" placeholder="Password"></div>
+            <div class="form-group"><input id="reg-referral" type="text" placeholder="Referral Code (Optional)"></div>
+            <button id="register-btn" class="btn btn-primary">Sign Up</button>
+            <p class="divider">Already have an account?</p><button onclick="toggleForms()" class="btn btn-secondary">Log In</button>
+        </div>
+    </div>
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-auth.js";
+        import { getFirestore, doc, setDoc, serverTimestamp, collection, query, where, getDocs, runTransaction } from "https://www.gstatic.com/firebasejs/9.15.0/firebase-firestore.js";
+        const firebaseConfig = { apiKey: "AIzaSyBNy8sZGAKh3Ika7O7F-NLZZZWAU-j2B0A", authDomain: "cashcoinser.firebaseapp.com", projectId: "cashcoinser", storageBucket: "cashcoinser.appspot.com", messagingSenderId: "179560740788", appId: "1:179560740788:web:4d6f5678e80f86899364e1" };
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        window.toggleForms=()=>{document.getElementById("login-form").classList.toggle("hidden");document.getElementById("register-form").classList.toggle("hidden")};
+        onAuthStateChanged(auth,e=>{e&&("tasks.html"!=window.location.pathname)&&(window.location.href="tasks.html")});
+        document.getElementById("login-btn").addEventListener("click",async()=>{const e=document.getElementById("login-email").value,t=document.getElementById("login-password").value;e&&t?await signInWithEmailAndPassword(auth,e,t).catch(e=>{alert(e.message)}):alert("Please enter email and password.")});
+        document.getElementById("register-btn").addEventListener("click",async()=>{const e=document.getElementById("reg-name").value,t=document.getElementById("reg-email").value,r=document.getElementById("reg-password").value,o=document.getElementById("reg-referral").value.trim();if(!e||!t||!r)return alert("Please fill all required fields.");try{const n=await createUserWithEmailAndPassword(auth,t,r),a=n.user,s="REF"+a.uid.substring(0,6).toUpperCase();if(await setDoc(doc(db,"users",a.uid),{name:e,email:t,balance:0,referralCode:s,createdAt:serverTimestamp()}),o){const i=query(collection(db,"users"),where("referralCode","==",o)),l=await getDocs(i);l.empty?alert("Sign up successful, but the referral code was not valid."):await runTransaction(db,async t=>{const r=l.docs[0],o=r.id,n=await t.get(doc(db,"settings","appConfig")),s=n.data().referralBonus||0;if(s>0){const i=doc(db,"users",o),l=await t.get(i),c=doc(collection(db,"transactions")),d=doc(collection(db,"referrals"));t.update(i,{balance:(l.data().balance||0)+s}),t.set(c,{userId:o,amount:s,description:`Referral Bonus from ${e}`,type:"referral_bonus",timestamp:serverTimestamp()}),t.set(d,{referrerId:o,referredId:a.uid,bonusAwarded:s,timestamp:serverTimestamp()})}}).then(()=>{alert("Sign up successful! Your referrer has been credited.")})}}catch(c){alert("Sign up failed: "+c.message)}});
+    </script>
+</body>
+</html>
